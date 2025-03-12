@@ -1088,3 +1088,12 @@ class MultiperspectivePerceptronTAGE8KB(MultiperspectivePerceptronTAGE):
     tage = MPP_TAGE_8KB()
     loop_predictor = MPP_LoopPredictor_8KB()
     statistical_corrector = MPP_StatisticalCorrector_8KB()
+
+
+class CS395TBP(BranchPredictor):
+    type = "CS395TBP"
+    cxx_class = "gem5::branch_prediction::CS395TBP"
+    cxx_header = "cpu/pred/cs395t_bp.hh"
+
+    size = Param.Unsigned(1024, "Example parameter")
+    # TODO: Add more params here
