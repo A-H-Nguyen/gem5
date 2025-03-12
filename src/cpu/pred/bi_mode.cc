@@ -74,7 +74,7 @@ BiModeBP::BiModeBP(const BiModeBPParams &params)
     choiceHistoryMask = choicePredictorSize - 1;
     globalHistoryMask = globalPredictorSize - 1;
 
-    choiceThreshold = (1ULL << (choiceCtrBits - 1)) - 1;
+          choiceThreshold = (1ULL << (choiceCtrBits - 1)) - 1;
     takenThreshold = (1ULL << (globalCtrBits - 1)) - 1;
     notTakenThreshold = (1ULL << (globalCtrBits - 1)) - 1;
 }
