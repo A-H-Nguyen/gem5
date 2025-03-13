@@ -66,7 +66,7 @@ namespace branch_prediction
  * RCR Functionality
  */
 
- RCR::RCR(int _T, int _W, int _D, int _shift, int _CTWidth)
+CS395TBP::RCR::RCR(int _T, int _W, int _D, int _shift, int _CTWidth)
  : CTWidth(_CTWidth), T(_T), W(_W), D(_D), S(_shift)
 {
   bb[0].resize(maxwindow);
@@ -92,42 +92,42 @@ namespace branch_prediction
 * ----------------------
 *       final hash value
 * */
-unsigned long
-RCR::calcHash(std::list<unsigned long> &vec, int n, int start, int shift)
+uint64_t
+CS395TBP::RCR::calcHash(std::list<uint64_t> &vec, int n, int start, int shift)
 {
-  unsigned long hash = 0;
+  uint64_t hash = 0;
   if (vec.size() < (start + n)) {
       return 0;
   }
-  unsigned long sh = 0;
+  uint64_t sh = 0;
   auto it = vec.begin();
   std::advance(it, start);
   for (; (it != vec.end()) && (n > 0); it++, n--) {
-    unsigned long val = *it;
+    uint64_t val = *it;
 
     // Shift the value
-    hash ^= val << (unsigned long)(sh);
+    hash ^= val << (uint64_t)(sh);
 
     sh += shift;
     if (sh >= CTWidth) {
-      sh -= (unsigned long)(CTWidth);
+      sh -= (uint64_t)(CTWidth);
     }
   }
   return hash & ((1 << CTWidth) - 1);
 }
 
-unsigned long RCR::getCCID()
+uint64_t CS395TBP::RCR::getCCID()
 {
   return ctxs.ccid & ((1 << CTWidth) - 1);
 }
 
-unsigned long RCR::getPCID() 
+uint64_t CS395TBP::RCR::getPCID() 
 {
   return ctxs.pcid & ((1 << CTWidth) - 1);
 }
 
 
-bool RCR::update(unsigned long pc, OpType opType, bool taken) 
+bool CS395TBP::RCR::update(uint64_t pc, OpType opType, bool taken) 
 {
   branchCount++;
   // Hash of all branches
