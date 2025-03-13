@@ -1095,5 +1095,34 @@ class CS395TBP(BranchPredictor):
     cxx_class = "gem5::branch_prediction::CS395TBP"
     cxx_header = "cpu/pred/cs395t_bp.hh"
 
-    size = Param.Unsigned(1024, "Example parameter")
-    # TODO: Add more params here
+    tage = Param.TAGE_SC_L_64KB(TAGE_SC_L_64KB(), "TAGE-SC-L branch predictor")
+
+    #LLBP constrained
+    # numContexts = Param.Int(16, "The number of contexts in the CD/LLBP")
+    # numPatterns = Param.Int(1024*14, "The number of patterns per pattern set")
+    # ctxAssoc = Param.Int(7, "Associativity of CD")
+    # ptrnAssoc = Param.Int(4, "Associativity of pattern sets")
+    # TTWidth = Param.Int(13, "Tag width")
+    # CTWidth = Param.Int(14, "Tag width")
+    # pbSize = Param.Int(64, "Pattern Buffer size")
+    # pbAssoc = Param.Int(4, "Pattern Buffer Associativity")
+
+    # LLBP UNCONSTRAINED
+    numContexts = Param.Int(1000000, "The number of contexts in the CD/LLBP")
+    numPatterns = Param.Int(1000000, "The number of patterns per pattern set")
+    ctxAssoc = Param.Int(1000000, "Associativity of CD")
+    ptrnAssoc = Param.Int(1000000, "Associativity of pattern sets")
+    TTWidth = Param.Int(20, "Tag width")
+    CTWidth = Param.Int(31, "Tag width")
+    pbSize = Param.Int(1, "Pattern Buffer size")
+    pbAssoc = Param.Int(1, "Pattern Buffer Associativity")
+
+    # this stays constant
+    CtrWidth = Param.Int(3, "Patterns counter width")
+    CtxReplCtrWidth = Param.Int(2, "Patterns counter width")
+    
+    nHistoryTables = Param.Int(36, "Num history tables")
+    minHist = Param.Int(6, "Min history")
+    maxHist = Param.Int(3000, "Max history")
+
+    # tagTableUBits = 1

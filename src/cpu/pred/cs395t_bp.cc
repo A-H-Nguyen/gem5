@@ -20,8 +20,138 @@ namespace gem5
 namespace branch_prediction
 {
 
+CS395TBP::CS395TBP(const CS395TBPParams &params) 
+  : BPredUnit(params), 
+    ghr(8192),
+    tage(params.tage),
+    llbpStorage(params.numContexts, params.numPatterns, 
+                params.ctxAssoc, params.ptrnAssoc),
+    rcr(HASHVALS, params.CTWidth),
+    patternBuffer(params.pbSize, params.pbAssoc) {
+
+  llbpStorage.allocate(0,0);
+  llbpStorage.erase(0);
+
+  int m[MAXNHIST];
+  int mllbp[MAXNHIST];
+  m[1] = params.minHist;
+  m[params.nHistoryTables / 2] = params.maxHist;
+  for (int i = 2; i <= params.nHistoryTables / 2; i++) {
+    m[i] = (int)(((double)params.minHist *
+                  pow((double)(params.maxHist) / (double)params.minHist,
+                  (double)(i - 1) / (double)(((params.nHistoryTables / 2) - 1)))) +
+                  0.5);
+  }
+
+  // for (int i = 1; i <= params.nHistoryTables; i++) {
+  //   NOSKIP[i] = ((i - 1) & 1) || ((i >= assoc_start) & (i < assoc_end));
+  // }
+
+  // if (params.nHistoryTables > 30) {
+  //     NOSKIP[4] = 0;
+  //     NOSKIP[params.nHistoryTables - 2] = 0;
+  //     NOSKIP[8] = 0;
+  //     NOSKIP[params.nHistoryTables - 6] = 0;
+  //     // just eliminate some extra tables (very very marginal)
+  // }
+
+  for (int i = params.nHistoryTables; i > 1; i--) {
+    m[i] = m[(i + 1) / 2];
+  }
+
+  for (int i = 1; i <= params.nHistoryTables; i++) {
+    mllbp[i] = (i%2) ? m[i] : m[i]+2;
+
+    fghrT1[i] = new FoldedHistoryFast(ghr, mllbp[i], TTWidth);
+    fghrT2[i] = new FoldedHistoryFast(ghr, mllbp[i], TTWidth - 1);
+  }
+}
+
+bool CS395TBP::lookup(ThreadID tid, Addr branch_addr, void * &bp_history)
+{
+  bool tagePred = tage->lookup(tid, branch_addr, bp_history);
+  return tagePred;
+}
+
+void CS395TBP::updateHistories(ThreadID tid, Addr pc, bool uncond,
+                      bool taken, Addr target, void * &bp_history)
+{
+
+}
+
+void CS395TBP::squash(ThreadID tid, void * &bp_history)
+{
+  
+}
+
+void CS395TBP::update(ThreadID tid, Addr pc, bool taken,
+                    void * &bp_history, bool squashed,
+                    const StaticInstPtr & inst, Addr target) {
+  tage->update(tid, pc, taken, bp_history, squashed, inst, target);
+
+  rcr.update(pc, getOpType(inst), taken);
+}
 
 
+OpType CS395TBP::getOpType(const StaticInstPtr & inst) {
+  if (!inst) {
+    return OPTYPE_ERROR;  // Return error if instruction is null
+  }
+
+  // Unconditional branches
+  if (inst->isUncondCtrl()) {
+    if (inst->isReturn()) return OPTYPE_RET_UNCOND;
+    if (inst->isCall()) {
+        return inst->isDirectCtrl() ? OPTYPE_CALL_DIRECT_UNCOND : 
+                                      OPTYPE_CALL_INDIRECT_UNCOND;
+    }
+    return inst->isDirectCtrl() ? OPTYPE_JMP_DIRECT_UNCOND : 
+                                  OPTYPE_JMP_INDIRECT_UNCOND;
+  }
+
+  // Conditional branches
+  if (inst->isCondCtrl()) {
+    if (inst->isReturn()) return OPTYPE_RET_COND;
+    if (inst->isCall()) {
+        return inst->isDirectCtrl() ? OPTYPE_CALL_DIRECT_COND : 
+                                      OPTYPE_CALL_INDIRECT_COND;
+    }
+    return inst->isDirectCtrl() ? OPTYPE_JMP_DIRECT_COND : 
+                                  OPTYPE_JMP_INDIRECT_COND;
+  }
+
+  // Default: Regular operation (not a branch)
+  return OPTYPE_OP;
+}
+
+// bool CS395TBP::GetPrediction(Addr pc) {
+
+
+// }
+
+// void CS395TBP::llbpPredict(Addr pc) {
+//   // Get the current context (CCID)
+//   auto ctx_key = rcr.getCCID();
+//   HitContext = llbpStorage.get(ctx_key);
+
+
+//   if (HitContext) {
+//       for (int i = nHistoryTables; i > 0; i--) {
+//           if (NOSKIP[i]) {
+//               llbpEntry = HitContext->patterns.get(KEY[i]);
+
+//               if (llbpEntry) {
+//                   llbp.hit = i;
+//                   llbp.pVal = llbpEntry->ctr;
+//                   llbp.pred = llbp.pVal >= 0;
+//                   llbp.conf = compConf(llbp.pVal, CtrWidth);
+//                   llbp.histLength = i;
+//                   break;
+//               }
+//           }
+//       }
+//   }  
+// }
 
 /************************************************************
  * RCR Functionality
@@ -88,7 +218,7 @@ uint64_t CS395TBP::RCR::getPCID()
 }
 
 
-bool CS395TBP::RCR::update(uint64_t pc, OpType opType, bool taken) 
+bool CS395TBP::RCR::update(Addr pc, OpType opType, bool taken) 
 {
   branchCount++;
   // Hash of all branches
@@ -132,7 +262,6 @@ bool CS395TBP::RCR::update(uint64_t pc, OpType opType, bool taken)
     break;
   }
 
-// PRINTIF(COND,"UH:%llx, %i, %i\n", pc, opType, taken);
   // If the size has changed the hash has changed
   bool changed = false;
   if (bb[0].size() > maxwindow) {
@@ -152,3 +281,5 @@ bool CS395TBP::RCR::update(uint64_t pc, OpType opType, bool taken)
 
 } // namespace branch_prediction
 } // namespace gem5
+ 
+// DEFINE_SIM_OBJECT(gem5::branch_prediction::CS395TBP);

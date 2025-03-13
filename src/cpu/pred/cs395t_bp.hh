@@ -12,9 +12,14 @@
 #include "params/TAGE_SC_L_TAGE_64KB.hh"
 #include "params/CS395TBP.hh"
 
-// LLBP default hash values
-// [T, W, D, S]
-#define HASHVALS 3, 8, 8, 2
+
+
+#define HASHVALS 3, 8, 8, 2 // LLBP default hash values: [T, W, D, S]
+const unsigned MAXNHIST = 40; // Constant limit for the number of tables
+
+inline int center(int8_t ctr) {
+  return 2 * ctr + 1;
+}
 
 namespace gem5
 {
@@ -57,48 +62,12 @@ typedef enum {
     MAX
 } BrType;
 
-// typedef uint64_t Key;
-// Key KEY[MAXNHIST];  //
-
-// class CS395TBP : public BPredUnit
-class CS395TBP : public TAGE_SC_L_TAGE
+class CS395TBP : public BPredUnit
+// class CS395TBP : public TAGE_SC_L_TAGE
 {
   public:
-    CS395TBP(const CS395TBPParams &params) 
-        : TAGE_SC_L_TAGE_64KB(params),
-        llbpStorage(params->numContexts, params->numPatterns, 
-                    params->ctxAssoc, params->ptrnAssoc),
-        rcr(HASHVALS,params->CTWidth),
-        patternBuffer(params->pbSize, params->pbAssoc) {
+    CS395TBP(const CS395TBPParams &params);
 
-      llbpStorage.allocate(0,0);
-      llbpStorage.erase(0);
-
-      int mllbp[params->MAXNHIST];
-      for (int i = 1; i <= nhist; i++) {
-          mllbp[i] = (i%2) ? m[i] : m[i]+2;
-  
-          fghrT1[i] = new FoldedHistoryFast(ghr, mllbp[i], TTWidth);
-          fghrT2[i] = new FoldedHistoryFast(ghr, mllbp[i], TTWidth - 1);
-      }
-    }
-
-  protected:
-    const int numContexts;
-    const int numPatterns;
-    const int ctxAssoc;
-    const int ptrnAssoc;
-    const int TTWidth;
-    const int CTWidth;
-    const int pbSize;
-    const int pbAssoc;
-    const int CtrWidth;
-    const int CtxReplCtrWidth;
-
-  private:
-    inline bool getPrediction(Addr pc);
-
-  public:
     bool lookup(ThreadID tid, Addr pc, void * &bp_history) override;
     void updateHistories(ThreadID tid, Addr pc, bool uncond,
                          bool taken, Addr target, void * &bp_history) override;
@@ -106,9 +75,58 @@ class CS395TBP : public TAGE_SC_L_TAGE
     void update(ThreadID tid, Addr pc, bool taken, void * &bp_history,
                 bool squashed, const StaticInstPtr &inst, Addr target) override;
 
+  // Parameters
+  protected:
+    int numContexts;
+    int numPatterns;
+    int ctxAssoc;
+    int ptrnAssoc;
+    int TTWidth;
+    int CTWidth;
+    int pbSize;
+    int pbAssoc;
+    int CtrWidth;
+    int CtxReplCtrWidth;
+    int nHistoryTables;
+    int minHist;
+    int maxHist;
+
+  private:
+    OpType getOpType(const StaticInstPtr & inst);
+
+    inline bool getPrediction(Addr pc);
+    void llbpPredict(Addr pc);
+
+    // chooser functions to arbitrate between
+    // the baseline TAGE and LLBP
+    bool isNotUseful(bool taken);
+    bool isUseful(bool taken);
+    void updateL2Usefulness(bool taken);
+
+    unsigned chooseProvider();
+
+    inline bool llbpCorrect(bool taken);
+    inline bool primCorrect(bool taken);
+    inline bool tageCorrect(bool taken);
+    inline bool llbpUseful(bool taken);
+
   private:
     // Prediction Structures
-    TAGE_SC_L_TAGE_64KB tage;
+
+    // The global history register
+    HistoryRegisterFast ghr;
+
+    typedef uint64_t Key;
+    Key KEY[MAXNHIST];
+    
+    bool NOSKIP[MAXNHIST];  // to manage the associativity for different
+                            // history lengths
+    
+    // A map to filter the used history lengths.
+    std::unordered_map<int,int> fltTables;
+
+
+    TAGE_SC_L_64KB *tage;
 
     /********************************************************************
      * LLBP Pattern
@@ -291,20 +309,20 @@ class CS395TBP : public TAGE_SC_L_TAGE
     class RCR {
       const int maxwindow = 120;
 
-      unsigned long 
-      calcHash(std::list<unsigned long> &vec, int n, int start=0, int shift=0);
+      uint64_t 
+      calcHash(std::list<uint64_t> &vec, int n, int start=0, int shift=0);
 
       // The context tag width
       const int CTWidth;
 
       // A list of previouly taken branches
-      std::list<unsigned long> bb[10];
+      std::list<uint64_t> bb[10];
 
       // We compute the context ID and prefetch context ID
       // only when the content of the RCR changes.
       struct {
-          unsigned long ccid = 0;
-          unsigned long pcid = 0;
+          uint64_t ccid = 0;
+          uint64_t pcid = 0;
       } ctxs;
 
       int branchCount = 0;
@@ -316,13 +334,13 @@ class CS395TBP : public TAGE_SC_L_TAGE
         RCR(int _T, int _W, int _D, int _shift, int _CTWidth);
 
         // Push a new branch into the RCR.
-        bool update(unsigned long pc, OpType type, bool taken);
+        bool update(Addr pc, OpType type, bool taken);
 
         // Get the current context ID
-        unsigned long getCCID();
+        uint64_t getCCID();
 
         // Get the prefetch context ID
-        unsigned long getPCID();
+        uint64_t getPCID();
     } rcr;
 
     /********************************************************************
@@ -399,7 +417,13 @@ class CS395TBP : public TAGE_SC_L_TAGE
         bool isProvider = false;
         bool shorter = false;
     } llbp;
+
+    // Folded history register. Same as in the TAGE predictor.
+    FoldedHistoryFast* fghrT1[MAXNHIST];
+    FoldedHistoryFast* fghrT2[MAXNHIST];
 };
+
+// DECLARE_SIM_OBJECT(CS395TBP);
 
 } // namespace branch_prediction
 
