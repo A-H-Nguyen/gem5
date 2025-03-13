@@ -74,13 +74,14 @@ bool CS395TBP::lookup(ThreadID tid, Addr branch_addr, void * &bp_history)
 }
 
 void CS395TBP::updateHistories(ThreadID tid, Addr pc, bool uncond,
-                      bool taken, Addr target, void * &bp_history)
+                               bool taken, Addr target, void * &bp_history)
 {
-
+  tage->updateHistories(tid, pc, uncond, taken, target, bp_history);
 }
 
 void CS395TBP::squash(ThreadID tid, void * &bp_history)
 {
+  tage->squash(tid, bp_history);
   
 }
 
@@ -90,6 +91,27 @@ void CS395TBP::update(ThreadID tid, Addr pc, bool taken,
   tage->update(tid, pc, taken, bp_history, squashed, inst, target);
 
   rcr.update(pc, getOpType(inst), taken);
+
+  // ctrupdate(llbpEntry->ctr, resolveDir, CtrWidth);
+
+  // // This function updates the context replacement counter
+  // // - If a pattern becomes confident (correct prediction)
+  // //   the replacement counter is increased
+  // // - If a pattern becomes low confident (incorrect prediction)
+  // //   the replacement counter is decreased
+  // if (llbpEntry->ctr == (resolveDir ? 1 : -2)) {
+  //     // entry became medium confident
+  //     ctrupdate(HitContext->replace, true, CtxReplCtrWidth);
+  // }
+  // else if (llbpEntry->ctr == (resolveDir ? -1 : 0)) {
+  //     // entry became low confident
+  //     ctrupdate(HitContext->replace, false, CtxReplCtrWidth);
+  // }
+
+  // // If the prediction wrong update also the BIM
+  // if (!llbpCorrect(resolveDir) && (llbp.conf == LowConf)) {
+  //     updateBim = true;
+  // }
 }
 
 

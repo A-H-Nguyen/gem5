@@ -4,6 +4,7 @@
 #include "base/sat_counter.hh"
 #include "cpu/pred/bpred_unit.hh"
 #include "cpu/pred/llbp_cache.h"
+#include "cpu/pred/llbp_counters.h"
 #include "cpu/pred/llbp_hist_registers.h"
 // #include "cpu/pred/tage_sc_l.hh"
 #include "cpu/pred/tage_sc_l_64KB.hh"
@@ -16,10 +17,6 @@
 
 #define HASHVALS 3, 8, 8, 2 // LLBP default hash values: [T, W, D, S]
 const unsigned MAXNHIST = 40; // Constant limit for the number of tables
-
-inline int center(int8_t ctr) {
-  return 2 * ctr + 1;
-}
 
 namespace gem5
 {
@@ -400,12 +397,6 @@ class CS395TBP : public BPredUnit
         }
     } patternBuffer;
 
-    // Pointers to context, llbp pattern and PB entry in case of a
-    // LLBP pattern/context match.
-    Context* HitContext;
-    Pattern* llbpEntry;
-    PBEntry* pbEntry;
-
     // A struct to maintain the prediction info from LLBP.
     struct LLBPPredInfo {
         bool hit = false;
@@ -417,6 +408,12 @@ class CS395TBP : public BPredUnit
         bool isProvider = false;
         bool shorter = false;
     } llbp;
+
+    // Pointers to context, llbp pattern and PB entry in case of a
+    // LLBP pattern/context match.
+    Context* HitContext;
+    Pattern* llbpEntry;
+    PBEntry* pbEntry;
 
     // Folded history register. Same as in the TAGE predictor.
     FoldedHistoryFast* fghrT1[MAXNHIST];
