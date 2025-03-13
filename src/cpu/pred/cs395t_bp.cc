@@ -20,46 +20,7 @@ namespace gem5
 namespace branch_prediction
 {
 
-// bool CS395TBP::predict(ThreadID tid, Addr pc, bool cond_branch, void* &b) {
-//   return false;
-// }
 
-// void
-// CS395TBP::update(ThreadID tid, Addr pc, bool taken, void * &bp_history, 
-//                  bool squashed, const StaticInstPtr & inst, Addr target)
-// {
-//     // TODO FIXME: Main update function when ground truth for the branch is
-//     // computed.
-// }
-
-// void
-// CS395TBP::updateHistories(ThreadID tid, Addr branch_pc, bool taken, 
-//                          TAGEBase::BranchInfo* b, bool speculative, 
-//                          const StaticInstPtr &inst, Addr target)
-// {
-//     // TODO FIXME: Update the branch predictor's internal structures
-//     // (e.g. path, global history) after the branch was resolved. It'll get
-//     // called automatically by gem5.
-//     //
-//     // Note that this also gets called for unconditional branches, so you may
-//     // choose to filter them out if necessary.
-// }
-
-// void
-// CS395TBP::squash(ThreadID tid, bool taken, TAGEBase::BranchInfo *bi,
-//                  Addr target)
-// {
-//     // TODO FIXME: Clean up branch state when there is a pipeline squash.
-//     // If bp_history is being used, then this is likely where to free the
-//     // memory.  Also, update any speculative state.
-// }
-
-// bool
-// CS395TBP::lookup(ThreadID tid, Addr branch_addr, void * &bp_history)
-// {
-//     // TODO FIXME: Make the prediction for the branch.
-//     return false;
-// }
 
 
 /************************************************************

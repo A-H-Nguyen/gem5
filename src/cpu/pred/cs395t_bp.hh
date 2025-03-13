@@ -3,6 +3,8 @@
 
 #include "base/sat_counter.hh"
 #include "cpu/pred/bpred_unit.hh"
+#include "cpu/pred/llbp_cache.h"
+#include "cpu/pred/llbp_hist_registers.h"
 // #include "cpu/pred/tage_sc_l.hh"
 #include "cpu/pred/tage_sc_l_64KB.hh"
 #include "params/TAGE_SC_L_64KB.hh"
@@ -10,151 +12,12 @@
 #include "params/TAGE_SC_L_TAGE_64KB.hh"
 #include "params/CS395TBP.hh"
 
+// LLBP default hash values
+// [T, W, D, S]
+#define HASHVALS 3, 8, 8, 2
+
 namespace gem5
 {
-// LLBP's cache implementation. It's too complex to implement gem5's caches
-// into a branch predictor, and Edinburgh already did the actual work
-template <typename key_t, typename value_t>
-class BaseCache {
-   protected:
-    typedef typename std::pair<key_t, value_t> key_value_pair_t;
-    typedef typename std::list<key_value_pair_t>::iterator list_iterator_t;
-    typedef typename std::list<key_value_pair_t> set_t;
-
-    std::unordered_map<uint64_t, list_iterator_t> _index;
-    std::vector<std::list<key_value_pair_t>> _cache;
-    const size_t _max_size;
-    const size_t _assoc;
-    const uint64_t _sets;
-    const uint64_t _set_mask;
-
-   public:
-    BaseCache(size_t max_size, size_t assoc)
-        : _max_size(max_size),
-          _assoc(assoc),
-          _sets(max_size / assoc),
-          _set_mask(_sets - 1) {
-        // Check if number of sets is a power of 2
-        assert((_sets & (_sets - 1)) == 0);
-        assert(_assoc * _sets == _max_size);
-        _cache.resize(_sets);
-        // for (auto& set : _cache) {
-        //     set.resize(assoc);
-        // }
-    }
-
-    void printCfg() {
-        printf("Max size: %lu, Assoc: %lu, Sets: %lu\n", _max_size, _assoc,
-               _sets);
-    }
-
-    size_t size() const { return _index.size(); }
-
-    key_t index(const key_t& key) { return key & _set_mask; }
-
-    set_t& getSet(const key_t& key) {
-        return _cache[index(key)];
-    }
-
-    const std::unordered_map<key_t, list_iterator_t> getMap() { return _index; }
-
-    value_t* get(const key_t& key) {
-        auto it = _index.find(key);
-        if (it == _index.end()) {
-            return nullptr;
-        }
-        return &it->second->second;
-    }
-
-    void erase(const key_t& key) {
-        auto it = _index.find(key);
-        if (it == _index.end()) {
-            return;
-        }
-        auto& set = getSet(key);
-        set.erase(it->second);
-        _index.erase(key);
-    }
-
-    value_t* getVictim(const key_t& key) {
-        auto& set = getSet(key);
-        if (set.size() < _assoc) {
-            return nullptr;
-        }
-        return &set.back().second;
-    }
-
-    void touch(const key_t& key) {
-        auto it = _index.find(key);
-        if (it == _index.end()) {
-            return;
-        }
-        auto& set = getSet(key);
-        set.splice(set.begin(), set, it->second);
-    }
-
-    bool exists(const key_t& key) const {
-        return _index.find(key) != _index.end();
-    }
-
-    int distance(const key_t& key) {
-        auto it = _index.find(key);
-        if (it == _index.end()) {
-            return -1;
-        }
-        auto& set = getSet(key);
-        return std::distance(set.begin(), it->second);
-    }
-
-    set_t& getResizedSet(const key_t& key) {
-        auto& set = getSet(key);
-
-        // If this element will exceed the max size, remove the last element
-        if (set.size() >= _assoc) {
-            auto last = set.end();
-            last--;
-            _index.erase(last->first);
-            set.pop_back();
-        }
-        return set;
-    }
-
-    value_t* insertAt(const key_t& key, int at = 0) {
-        auto v = get(key);
-        if (v != nullptr) {
-            return v;
-        }
-
-        // Get the set with a free item
-        auto& set = getResizedSet(key);
-
-        // Move to the insert position
-        auto it2 = set.begin();
-        at = std::min(at, (int)set.size());
-        std::advance(it2, at);
-
-        it2 = set.emplace(it2, key_value_pair_t(key, value_t()));
-        _index[key] = it2;
-        return &(it2->second);
-    }
-
-    value_t* insert(const key_t& key) {
-        auto v = get(key);
-        if (v != nullptr) {
-            return v;
-        }
-
-        // Get the set with a free item
-        auto& set = getResizedSet(key);
-
-        // Move to the insert position
-        auto it = set.begin();
-
-        it = set.emplace(it, key_value_pair_t(key, value_t()));
-        _index[key] = it;
-        return &(it->second);
-    }
-};
 
 struct CS395TBPParams;
 
@@ -201,19 +64,39 @@ typedef enum {
 class CS395TBP : public TAGE_SC_L_TAGE
 {
   public:
-    CS395TBP(const CS395TBPParams &params);
+    CS395TBP(const CS395TBPParams &params) 
+        : TAGE_SC_L_TAGE_64KB(params),
+        llbpStorage(params->numContexts, params->numPatterns, 
+                    params->ctxAssoc, params->ptrnAssoc),
+        rcr(HASHVALS,params->CTWidth),
+        patternBuffer(params->pbSize, params->pbAssoc) {
+
+      llbpStorage.allocate(0,0);
+      llbpStorage.erase(0);
+
+      int mllbp[params->MAXNHIST];
+      for (int i = 1; i <= nhist; i++) {
+          mllbp[i] = (i%2) ? m[i] : m[i]+2;
+  
+          fghrT1[i] = new FoldedHistoryFast(ghr, mllbp[i], TTWidth);
+          fghrT2[i] = new FoldedHistoryFast(ghr, mllbp[i], TTWidth - 1);
+      }
+    }
 
   protected:
-    const int numContexts = 1000000;
-    const int numPatterns = 1000000;
-    const int ctxAssoc = numContexts;
-    const int ptrnAssoc = numPatterns;
-    const int TTWidth = 20;
-    const int CTWidth = 31;
-    const int pbSize = 1;
-    const int pbAssoc = pbSize;
-    const int CtrWidth = 3;
-    const int CtxReplCtrWidth = 2;
+    const int numContexts;
+    const int numPatterns;
+    const int ctxAssoc;
+    const int ptrnAssoc;
+    const int TTWidth;
+    const int CTWidth;
+    const int pbSize;
+    const int pbAssoc;
+    const int CtrWidth;
+    const int CtxReplCtrWidth;
+
+  private:
+    inline bool getPrediction(Addr pc);
 
   public:
     bool lookup(ThreadID tid, Addr pc, void * &bp_history) override;
@@ -225,6 +108,7 @@ class CS395TBP : public TAGE_SC_L_TAGE
 
   private:
     // Prediction Structures
+    TAGE_SC_L_TAGE_64KB tage;
 
     /********************************************************************
      * LLBP Pattern
