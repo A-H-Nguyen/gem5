@@ -49,6 +49,7 @@ struct HistoryRegister {
     bool operator[](const uint32_t i) {
         uint32_t index = (head + size - i) % size;
         assert(index < size);
+        // if (index >= size) index = size - 1;
         return history[index];
     }
 
@@ -97,6 +98,7 @@ struct PCHistoryRegister {
     entry_t operator[](const uint32_t i) {
         uint32_t index = (head + size - i) % size;
         assert(index < size);
+        // if (index >= size) index = size - 1;
         return history[index];
     }
 
@@ -147,7 +149,9 @@ class FoldedHistory {
         //  -need an extra bit, so max is 31 bits...
         assert(outputWidth < 32);
         assert(outputWidth != 0);
+
         remainder = inputWidth % outputWidth;
+        // remainder = inputWidth % 31;
         value = 0;
     }
 
@@ -250,8 +254,12 @@ class FoldedHistoryFast {
     {
         // using a 32-bit integer as register
         //  -need an extra bit, so max is 31 bits...
+        // printf("input iw: %d\n", iw);
+        // printf("input ow: %d\n", ow);
         assert(outputWidth < 32);
         assert(outputWidth != 0);
+        // if (outputWidth >= 32) outputWidth = 31;
+        // if (outputWidth == 0) outputWidth = 1;
         value = 0;
     }
 
@@ -412,11 +420,15 @@ public:
 
 	bool read(int n) {
 		assert(n < MAXHIST);
+        // if (n >= MAXHIST) n = MAXHIST - 1;
+         
 		return bhr[n];
 	}
 
 	uint32_t read(int from, int n) {
 		assert(n < MAXHIST);
+        // if (n >= MAXHIST) n = MAXHIST - 1;
+         
 		int r = 0;
 		for (int i = from; i < n; ++i) {
 			r ^= bhr[i] << ((i - from) % 32);
@@ -460,6 +472,9 @@ public:
 		assert(pos[0] < WIDTH);
 		assert(pos[1] < WIDTH);
 		assert(pos[2] < WIDTH);
+        // if (pos[0] >= WIDTH) pos[0] = WIDTH - 1;
+        // if (pos[1] >= WIDTH) pos[1] = WIDTH - 1;
+        // if (pos[2] >= WIDTH) pos[2] = WIDTH - 1;
 	}
 	void init(int s, int e) {
 		comp = 0;
@@ -473,6 +488,9 @@ public:
 		assert(pos[0] < WIDTH);
 		assert(pos[1] < WIDTH);
 		assert(pos[2] < WIDTH);
+        // if (pos[0] >= WIDTH) pos[0] = WIDTH - 1;
+        // if (pos[1] >= WIDTH) pos[1] = WIDTH - 1;
+        // if (pos[2] >= WIDTH) pos[2] = WIDTH - 1;
 	}
 
 	void init(int l) {
@@ -482,6 +500,8 @@ public:
 	uint32_t read(uint32_t pc) {
 		assert(comp >= 0);
 		assert(comp < (1 << WIDTH));
+        // if (comp < 0) comp = 0;
+		// if (comp > (1 << WIDTH)) comp = (1 << WIDTH);
 
 		pc &= (1 << WIDTH) - 1;
 		return pc ^ comp;
@@ -489,6 +509,9 @@ public:
 	uint32_t read(uint32_t pc, int rot) {
 		assert(comp >= 0);
 		assert(comp < (1 << WIDTH));
+        // if (comp < 0) comp = 0;
+		// if (comp > (1 << WIDTH)) comp = (1 << WIDTH);
+
 		uint32_t r = rot % WIDTH;
 		uint32_t p = pc & ((1 << WIDTH) - 1);
 		p = (p << r);

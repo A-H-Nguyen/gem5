@@ -32,6 +32,17 @@ CS395TBP::CS395TBP(const CS395TBPParams &params)
   llbpStorage.allocate(0,0);
   llbpStorage.erase(0);
 
+  printf("LLBP Params:\n");
+
+  printf("The number of contexts in the CD/LLBP: %d\n",params.numContexts);
+  printf("The number of patterns per pattern set: %d\n",params.numPatterns);
+  printf("Associativity of CD: %d\n",params.ctxAssoc);
+  printf("Associativity of pattern sets: %d\n",params.ptrnAssoc);
+  printf("Tag width: %d\n",params.TTWidth);
+  printf("Tag width: %d\n",params.CTWidth);
+  printf("Pattern Buffer size: %d\n",params.pbSize);
+  printf("Pattern Buffer Associativity: %d\n",params.pbAssoc);
+
   int m[MAXNHIST];
   int mllbp[MAXNHIST];
   m[1] = params.minHist;
@@ -50,8 +61,8 @@ CS395TBP::CS395TBP(const CS395TBPParams &params)
   for (int i = 1; i <= params.nHistoryTables; i++) {
     mllbp[i] = (i%2) ? m[i] : m[i]+2;
 
-    fghrT1[i] = new FoldedHistoryFast(ghr, mllbp[i], TTWidth);
-    fghrT2[i] = new FoldedHistoryFast(ghr, mllbp[i], TTWidth - 1);
+    fghrT1[i] = new FoldedHistoryFast(ghr, mllbp[i], params.TTWidth);
+    fghrT2[i] = new FoldedHistoryFast(ghr, mllbp[i], params.TTWidth - 1);
   }
 }
 
@@ -60,10 +71,11 @@ CS395TBP::CS395TBP(const CS395TBPParams &params)
 bool CS395TBP::lookup(ThreadID tid, Addr branch_addr, void * &bp_history)
 {
   bool tagePred = tage->lookup(tid, branch_addr, bp_history);
-  int last_used_tage_len; // = tage->getLastUsedHistoryLength();
+  int last_used_tage_len = tage->last_hlen; // = tage->getLastUsedHistoryLength();
   // int last_used_tage_len = tage->get_hlen();
 
   llbpPredict(branch_addr);
+  printf("Here in LLBP Pred\n");
   if (llbp.histLength > last_used_tage_len) {
     llbp.isProvider = true;
   }
@@ -71,6 +83,7 @@ bool CS395TBP::lookup(ThreadID tid, Addr branch_addr, void * &bp_history)
     llbp.isProvider = false;
   }
 
+  printf("prediction made\n");
   return llbp.isProvider ? llbp.pred : tagePred;
 }
 

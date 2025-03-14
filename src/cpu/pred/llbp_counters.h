@@ -73,6 +73,8 @@ public:
 	void write(T v) {
 		assert(v <= MAX);
 		assert(v >= MIN);
+		// if (v > MAX) v = MAX;
+		// if (v < MIN) v = MIN;
 		ctr = v;
 	}
 	void add(T d) {

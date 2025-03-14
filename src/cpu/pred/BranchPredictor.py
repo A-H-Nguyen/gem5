@@ -1112,8 +1112,8 @@ class CS395TBP(BranchPredictor):
     numPatterns = Param.Int(1000000, "The number of patterns per pattern set")
     ctxAssoc = Param.Int(1000000, "Associativity of CD")
     ptrnAssoc = Param.Int(1000000, "Associativity of pattern sets")
-    TTWidth = Param.Int(20, "Tag width")
-    CTWidth = Param.Int(31, "Tag width")
+    TTWidth = Param.Int(20, "TT width")
+    CTWidth = Param.Int(31, "CT width")
     pbSize = Param.Int(1, "Pattern Buffer size")
     pbAssoc = Param.Int(1, "Pattern Buffer Associativity")
 

@@ -378,6 +378,9 @@ TAGEBase::tagePredict(ThreadID tid, Addr branch_pc,
                 gtable[i][tableIndices[i]].tag == tableTags[i]) {
                 bi->hitBank = i;
                 bi->hitBankIndex = tableIndices[bi->hitBank];
+                
+                last_hlen = i;
+
                 break;
             }
         }
