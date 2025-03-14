@@ -93,6 +93,8 @@ class CS395TBP : public BPredUnit
 
     inline bool getPrediction(Addr pc);
     void llbpPredict(Addr pc);
+    void llbpUpdate(Addr pc, bool resolveDir, bool predDir);
+    void llbpAllocate(int histLen, Addr pc, bool taken);
 
     // chooser functions to arbitrate between
     // the baseline TAGE and LLBP
@@ -115,10 +117,10 @@ class CS395TBP : public BPredUnit
 
     typedef uint64_t Key;
     Key KEY[MAXNHIST];
-    
+
     bool NOSKIP[MAXNHIST];  // to manage the associativity for different
                             // history lengths
-    
+
     // A map to filter the used history lengths.
     std::unordered_map<int,int> fltTables;
 
@@ -177,6 +179,7 @@ class CS395TBP : public BPredUnit
      * This struct contains some additional meta data for replacement
      * and statistics.
      ********************************************************************/
+    public:
     struct Context {
       bool valid;
       uint64_t key;
@@ -212,6 +215,8 @@ class CS395TBP : public BPredUnit
       }
     };
 
+
+    Context* allocateNewContext(Addr pc, uint64_t ctx_key);
 
     /********************************************************************
       * LLBP Storage
@@ -292,7 +297,7 @@ class CS395TBP : public BPredUnit
      *    due to the XOR function in case a loop is executed
      *
      * ********************************************************************* *
-     * EXAMPLE                                       
+     * EXAMPLE
      *                       pb-index (2.)  (3.)                             *
      *                      v             v     v                            *
      * history buffer : |l|k|j|i|h|g|f|e|d|c|b|a|                            *
@@ -300,13 +305,13 @@ class CS395TBP : public BPredUnit
      * a is the newest branch PC added to the buffer, l the oldest.          *
      * (2.) = W = 7; (3.) = D = 3                                            *
      * branches used to obtain PB index hash: j to d                         *
-     * branches used to obtain hash to prefetch into PB: g to a  
+     * branches used to obtain hash to prefetch into PB: g to a
      * *********************************************************************
      */
     class RCR {
       const int maxwindow = 120;
 
-      uint64_t 
+      uint64_t
       calcHash(std::list<uint64_t> &vec, int n, int start=0, int shift=0);
 
       // The context tag width
