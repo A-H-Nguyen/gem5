@@ -111,6 +111,8 @@ class TAGE_SC_L_TAGE : public TAGEBase
         truncatePathHist(p.truncatePathHist)
     {}
 
+    int last_hit_len;
+
     void calculateParameters() override;
 
     void buildTageTables() override;

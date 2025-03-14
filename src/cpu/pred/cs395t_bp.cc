@@ -72,18 +72,30 @@ CS395TBP::CS395TBP(const CS395TBPParams &params)
 bool CS395TBP::lookup(ThreadID tid, Addr branch_addr, void * &bp_history)
 {
   bool tagePred = tage->lookup(tid, branch_addr, bp_history);
-  return tagePred;
+  int last_used_tage_len; // = tage->getLastUsedHistoryLength();
+  // int last_used_tage_len = tage->get_hlen();
+
+  llbpPredict(branch_addr);
+  if (llbp.histLength > last_used_tage_len) {
+    llbp.isProvider = true;
+  }
+  else {
+    llbp.isProvider = false;
+  }
+
+  return llbp.isProvider ? llbp.pred : tagePred;
 }
 
 void CS395TBP::updateHistories(ThreadID tid, Addr pc, bool uncond,
                                bool taken, Addr target, void * &bp_history)
 {
-  tage->updateHistories(tid, pc, uncond, taken, target, bp_history);
+  // tage->updateHistories(tid, pc, uncond, taken, target, bp_history);
+  llbpUpdate(pc, taken, llbp.pred);
 }
 
 void CS395TBP::squash(ThreadID tid, void * &bp_history)
 {
-  tage->squash(tid, bp_history);
+  // tage->squash(tid, bp_history);
 
 }
 
@@ -93,27 +105,7 @@ void CS395TBP::update(ThreadID tid, Addr pc, bool taken,
   tage->update(tid, pc, taken, bp_history, squashed, inst, target);
 
   rcr.update(pc, getOpType(inst), taken);
-
-  // ctrupdate(llbpEntry->ctr, resolveDir, CtrWidth);
-
-  // // This function updates the context replacement counter
-  // // - If a pattern becomes confident (correct prediction)
-  // //   the replacement counter is increased
-  // // - If a pattern becomes low confident (incorrect prediction)
-  // //   the replacement counter is decreased
-  // if (llbpEntry->ctr == (resolveDir ? 1 : -2)) {
-  //     // entry became medium confident
-  //     ctrupdate(HitContext->replace, true, CtxReplCtrWidth);
-  // }
-  // else if (llbpEntry->ctr == (resolveDir ? -1 : 0)) {
-  //     // entry became low confident
-  //     ctrupdate(HitContext->replace, false, CtxReplCtrWidth);
-  // }
-
-  // // If the prediction wrong update also the BIM
-  // if (!llbpCorrect(resolveDir) && (llbp.conf == LowConf)) {
-  //     updateBim = true;
-  // }
+  // updateHistories(tid, pc, uncond, taken, target, bp_history);
 }
 
 
@@ -154,6 +146,12 @@ void CS395TBP::llbpPredict(Addr pc) {
 
   //#Ask Andrew: TAGE has any calcIndicesAndTags(pc)? We need to use that
   //calcIndicesAndTags(pc);
+
+  // int baseIndex;
+  // std::vector<int> compIndices(tage->numTables);
+  
+  // // Get indices
+  // tage->computeIndices(pc, baseIndex, compIndices);
 
   llbpEntry = nullptr;
   llbp = {};

@@ -68,6 +68,8 @@ class TAGEBase : public SimObject
     TAGEBase(const TAGEBaseParams &p);
     void init() override;
 
+    int last_hlen;
+
   protected:
     // Prediction Structures
 
@@ -471,7 +473,7 @@ class TAGEBase : public SimObject
     int *histLengths;
     int *tableIndices;
     int *tableTags;
-
+    
     std::vector<int8_t> useAltPredForNewlyAllocated;
     int64_t tCounter;
     uint64_t logUResetPeriod;
