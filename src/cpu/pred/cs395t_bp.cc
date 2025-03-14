@@ -43,18 +43,6 @@ CS395TBP::CS395TBP(const CS395TBPParams &params)
                   0.5);
   }
 
-  // for (int i = 1; i <= params.nHistoryTables; i++) {
-  //   NOSKIP[i] = ((i - 1) & 1) || ((i >= assoc_start) & (i < assoc_end));
-  // }
-
-  // if (params.nHistoryTables > 30) {
-  //     NOSKIP[4] = 0;
-  //     NOSKIP[params.nHistoryTables - 2] = 0;
-  //     NOSKIP[8] = 0;
-  //     NOSKIP[params.nHistoryTables - 6] = 0;
-  //     // just eliminate some extra tables (very very marginal)
-  // }
-
   for (int i = params.nHistoryTables; i > 1; i--) {
     m[i] = m[(i + 1) / 2];
   }
@@ -89,13 +77,13 @@ bool CS395TBP::lookup(ThreadID tid, Addr branch_addr, void * &bp_history)
 void CS395TBP::updateHistories(ThreadID tid, Addr pc, bool uncond,
                                bool taken, Addr target, void * &bp_history)
 {
-  // tage->updateHistories(tid, pc, uncond, taken, target, bp_history);
+  tage->updateHistories(tid, pc, uncond, taken, target, bp_history);
   llbpUpdate(pc, taken, llbp.pred);
 }
 
 void CS395TBP::squash(ThreadID tid, void * &bp_history)
 {
-  // tage->squash(tid, bp_history);
+  tage->squash(tid, bp_history);
 
 }
 
@@ -103,6 +91,7 @@ void CS395TBP::update(ThreadID tid, Addr pc, bool taken,
                     void * &bp_history, bool squashed,
                     const StaticInstPtr & inst, Addr target) {
   tage->update(tid, pc, taken, bp_history, squashed, inst, target);
+  //llbpUpdate(pc, taken, llbp.pred);
 
   rcr.update(pc, getOpType(inst), taken);
   // updateHistories(tid, pc, uncond, taken, target, bp_history);
@@ -149,7 +138,7 @@ void CS395TBP::llbpPredict(Addr pc) {
 
   // int baseIndex;
   // std::vector<int> compIndices(tage->numTables);
-  
+
   // // Get indices
   // tage->computeIndices(pc, baseIndex, compIndices);
 
