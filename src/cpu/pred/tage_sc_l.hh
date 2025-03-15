@@ -99,7 +99,7 @@ class TAGE_SC_L_TAGE : public TAGEBase
     };
 
     virtual TAGEBase::BranchInfo *makeBranchInfo() override;
-    int last_hlen;
+    // int last_hlen;
 
     TAGE_SC_L_TAGE(const TAGE_SC_L_TAGEParams &p)
       : TAGEBase(p),
