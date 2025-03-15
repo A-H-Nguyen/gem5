@@ -100,6 +100,8 @@ class TAGE: public BPredUnit
   public:
 
     TAGE(const TAGEParams &params);
+  
+    int get_last_hlen() { return tage->last_hlen; }
 
     // Base class methods.
     bool lookup(ThreadID tid, Addr pc, void* &bp_history) override;

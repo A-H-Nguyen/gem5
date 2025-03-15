@@ -366,6 +366,7 @@ TAGEBase::tagePredict(ThreadID tid, Addr branch_pc,
     if (cond_branch) {
         // TAGE prediction
 
+        // printf("Here in tage_base\n");
         calculateIndicesAndTags(tid, pc, bi);
 
         bi->bimodalIndex = bindex(pc);
