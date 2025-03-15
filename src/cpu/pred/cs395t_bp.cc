@@ -98,16 +98,17 @@ void CS395TBP::squash(ThreadID tid, void * &bp_history)
 {
   tage->squash(tid, bp_history);
 
+
 }
 
 void CS395TBP::update(ThreadID tid, Addr pc, bool taken,
                     void * &bp_history, bool squashed,
                     const StaticInstPtr & inst, Addr target) {
   tage->update(tid, pc, taken, bp_history, squashed, inst, target);
-  //llbpUpdate(pc, taken, llbp.pred);
+  llbpUpdate(pc, taken, llbp.pred);
 
   rcr.update(pc, getOpType(inst), taken);
-  // updateHistories(tid, pc, uncond, taken, target, bp_history);
+  //updateHistories(tid, pc, uncond, taken, target, bp_history);
 }
 
 
@@ -177,7 +178,7 @@ void CS395TBP::llbpPredict(Addr pc) {
   HitContext = llbpStorage.get(ctx_key);
 
   if (HitContext) {
-      //printf("Updating LLBP Histlen\n");
+      printf("Updating LLBP Histlen\n");
       //for (int i = nHistoryTables; i > 0; i--) {
       for (int i = MAXNHIST-1; i > 0; i--) {
           //Traverse the tables in descending order of table history sizes
