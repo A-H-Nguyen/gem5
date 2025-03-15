@@ -309,7 +309,9 @@ class CS395TBP : public BPredUnit
      * *********************************************************************
      */
     class RCR {
-      const int maxwindow = 120;
+      // const int maxwindow = 120; // llbp 1
+      // const int maxwindow = 60; // llbp 2
+      const int maxwindow = 240; // llbp 3
 
       uint64_t
       calcHash(std::list<uint64_t> &vec, int n, int start=0, int shift=0);
