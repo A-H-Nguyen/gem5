@@ -70,43 +70,44 @@ CS395TBP::CS395TBP(const CS395TBPParams &params)
 
 bool CS395TBP::lookup(ThreadID tid, Addr branch_addr, void * &bp_history)
 {
-  bool tagePred = tage->lookup(tid, branch_addr, bp_history);
-  int last_used_tage_len = tage->get_last_hlen();
+  bool tagePred = tage->lookup(tid, branch_addr ^ rcr.getCCID(), bp_history);
+  return tagePred;
+  // bool tagePred = tage->lookup(tid, branch_addr, bp_history);
+  // int last_used_tage_len = tage->get_last_hlen();
 
-  // printf("TAGE histlen:%d\n",last_used_tage_len);
-  //printf("LLBP histlen:%d\n",llbp.histLength);
-  llbpPredict(branch_addr);
-  if (llbp.histLength > last_used_tage_len) {
-    llbp.isProvider = true;
-  }
-  else {
-    llbp.isProvider = false;
-  }
+  // // printf("TAGE histlen:%d\n",last_used_tage_len);
+  // //printf("LLBP histlen:%d\n",llbp.histLength);
+  // llbpPredict(branch_addr);
+  // if (llbp.histLength > last_used_tage_len) {
+  //   llbp.isProvider = true;
+  // }
+  // else {
+  //   llbp.isProvider = false;
+  // }
 
-  return llbp.isProvider ? llbp.pred : tagePred;
+  // return llbp.isProvider ? llbp.pred : tagePred;
 }
 
 void CS395TBP::updateHistories(ThreadID tid, Addr pc, bool uncond,
                                bool taken, Addr target, void * &bp_history)
 {
-  tage->updateHistories(tid, pc, uncond, taken, target, bp_history);
-  llbpUpdate(pc, taken, llbp.pred);
+  tage->updateHistories(tid, pc ^ rcr.getCCID(), uncond, taken, target, bp_history);
+  // llbpUpdate(pc, taken, llbp.pred);
 }
 
 void CS395TBP::squash(ThreadID tid, void * &bp_history)
 {
   tage->squash(tid, bp_history);
-
-
 }
 
 void CS395TBP::update(ThreadID tid, Addr pc, bool taken,
                     void * &bp_history, bool squashed,
                     const StaticInstPtr & inst, Addr target) {
-  tage->update(tid, pc, taken, bp_history, squashed, inst, target);
-  llbpUpdate(pc, taken, llbp.pred);
+  // tage->update(tid, pc, taken, bp_history, squashed, inst, target);
+  // llbpUpdate(pc, taken, llbp.pred);
 
   rcr.update(pc, getOpType(inst), taken);
+  tage->update(tid, pc ^ rcr.getCCID(), taken, bp_history, squashed, inst, target);
   //updateHistories(tid, pc, uncond, taken, target, bp_history);
 }
 
