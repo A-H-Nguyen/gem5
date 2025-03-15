@@ -46,19 +46,19 @@ CS395TBP::CS395TBP(const CS395TBPParams &params)
   int m[MAXNHIST];
   int mllbp[MAXNHIST];
   m[1] = params.minHist;
-  m[params.nHistoryTables / 2] = params.maxHist;
-  for (int i = 2; i <= params.nHistoryTables / 2; i++) {
+  m[-1] = params.maxHist;
+  for (int i = 2; i <= MAXNHIST / 2; i++) {
     m[i] = (int)(((double)params.minHist *
                   pow((double)(params.maxHist) / (double)params.minHist,
-                  (double)(i - 1) / (double)(((params.nHistoryTables / 2) - 1)))) +
+                  (double)(i - 1) / (double)(((MAXNHIST / 2) - 1)))) +
                   0.5);
   }
 
-  for (int i = params.nHistoryTables; i > 1; i--) {
+  for (int i = MAXNHIST-1; i > 1; i--) {
     m[i] = m[(i + 1) / 2];
   }
 
-  for (int i = 1; i <= params.nHistoryTables; i++) {
+  for (int i = 1; i <= MAXNHIST-1; i++) {
     mllbp[i] = (i%2) ? m[i] : m[i]+2;
 
     fghrT1[i] = new FoldedHistoryFast(ghr, mllbp[i], params.TTWidth);
@@ -74,8 +74,9 @@ bool CS395TBP::lookup(ThreadID tid, Addr branch_addr, void * &bp_history)
   int last_used_tage_len = tage->last_hlen; // = tage->getLastUsedHistoryLength();
   // int last_used_tage_len = tage->get_hlen();
 
+  //printf("TAGE histlen:%d\n",last_used_tage_len);
+  //printf("LLBP histlen:%d\n",llbp.histLength);
   llbpPredict(branch_addr);
-  printf("Here in LLBP Pred\n");
   if (llbp.histLength > last_used_tage_len) {
     llbp.isProvider = true;
   }
@@ -83,7 +84,6 @@ bool CS395TBP::lookup(ThreadID tid, Addr branch_addr, void * &bp_history)
     llbp.isProvider = false;
   }
 
-  printf("prediction made\n");
   return llbp.isProvider ? llbp.pred : tagePred;
 }
 
@@ -157,7 +157,8 @@ void CS395TBP::llbpPredict(Addr pc) {
 
   llbpEntry = nullptr;
   llbp = {};
-  for (int i = 1; i <= nHistoryTables; i++) {
+  //for (int i = 1; i <= nHistoryTables; i++) {
+  for (int i = 1; i < MAXNHIST; i++) {
       if (!NOSKIP[i]) continue;
       // We don't use all history lengths. Only 16
       // By using the lower bits for the table number we can
@@ -176,7 +177,9 @@ void CS395TBP::llbpPredict(Addr pc) {
   HitContext = llbpStorage.get(ctx_key);
 
   if (HitContext) {
-      for (int i = nHistoryTables; i > 0; i--) {
+      //printf("Updating LLBP Histlen\n");
+      //for (int i = nHistoryTables; i > 0; i--) {
+      for (int i = MAXNHIST-1; i > 0; i--) {
           //Traverse the tables in descending order of table history sizes
           if (NOSKIP[i]) {
               llbpEntry = HitContext->patterns.get(KEY[i]);
